@@ -27,3 +27,15 @@ def is_valid(url):
     except TypeError:
         print ("TypeError for ", parsed)
         raise
+
+def scraper (url: str, resp: utils.response.Response): -> list
+    """
+    url:    The URL that was added to the frontier, and downloaded from the cache. 
+            It is of type str and was an url that was previously added to the frontier.
+            
+    resp:   This is the response given by the caching server for the requested URL. 
+            The response is an object of type Response (see utils/response.py)
+    
+    returns list
+    """
+    pass
