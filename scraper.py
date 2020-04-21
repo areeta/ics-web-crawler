@@ -9,10 +9,10 @@ def scraper(url, resp):
 
     if site.status_code != 200:  # request did not succeed
         return []
-
     links = extract_next_links(url, resp)
 
-    #return [link for link in links if is_valid(link)]
+    # need to move on to more URLs
+    return [link for link in links if is_valid(link)]
 
 
 def extract_next_links(url, resp):
@@ -27,9 +27,13 @@ def extract_next_links(url, resp):
 
 
 def is_valid(url):
+    # need to change this to fit assignment guidelines
     try:
         parsed = urlparse(url)
-        if parsed.scheme not in set(["http", "https"]):
+        if parsed.scheme not in {"http", "https"} \
+                and parsed.netloc not in {'www.ics.uci.edu', 'www.cs.uci.edu', 'www.informatics.uci.edu',
+                                          'www.stat.uci.edu',
+                                          'www.today.uci.edu/department/information_computer_sciences'}:
             return False
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
