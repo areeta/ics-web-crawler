@@ -1,12 +1,23 @@
 import re
+import requests
 from urllib.parse import urlparse
 
 def scraper(url, resp):
-    links = extract_next_links(url, resp)
-    return [link for link in links if is_valid(link)]
+    html = requests.get(url)  #status code
+    decoded_html = html.content.decode('latin-1')
+
+    parsed = urlparse(url)
+    base = f"{parsed.scheme}://{parsed.netloc}"  # the base url
+    page_links = re.findall('''<a\s+(?:[^>]*?\s+)?href="([^"]*)"''', decoded_html)  # links on pages
+
+    for link in page_links:
+        print(link)
+
+    #links = extract_next_links(url, resp)
+    return [link for link in page_links if is_valid(link)]
 
 def extract_next_links(url, resp):
-    # Implementation requred.
+    # Implementation required.
     return list()
 
 def is_valid(url):
@@ -28,14 +39,3 @@ def is_valid(url):
         print ("TypeError for ", parsed)
         raise
 
-def scraper (url: str, resp: utils.response.Response): -> list
-    """
-    url:    The URL that was added to the frontier, and downloaded from the cache. 
-            It is of type str and was an url that was previously added to the frontier.
-            
-    resp:   This is the response given by the caching server for the requested URL. 
-            The response is an object of type Response (see utils/response.py)
-    
-    returns list
-    """
-    pass
