@@ -1,24 +1,30 @@
 import re
 import requests
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
+from bs4 import BeautifulSoup
+
 
 def scraper(url, resp):
-    html = requests.get(url)  #status code
-    decoded_html = html.content.decode('latin-1')
+    site = requests.get(url)
 
-    parsed = urlparse(url)
-    base = f"{parsed.scheme}://{parsed.netloc}"  # the base url
-    page_links = re.findall('''<a\s+(?:[^>]*?\s+)?href="([^"]*)"''', decoded_html)  # links on pages
+    if site.status_code != 200:  # request did not succeed
+        return []
 
-    for link in page_links:
-        print(link)
+    soup = BeautifulSoup(requests.get(url).content, "html.parser")
+    for a_tag in soup.findAll("a"):  # html link tags
+        href = a_tag.attrs.get("href")  # url
 
-    #links = extract_next_links(url, resp)
-    return [link for link in page_links if is_valid(link)]
+
+    # #links = extract_next_links(url, resp)
+    # return [link for link in page_links if is_valid(link)]
+    return None
+
 
 def extract_next_links(url, resp):
     # Implementation required.
+
     return list()
+
 
 def is_valid(url):
     try:
