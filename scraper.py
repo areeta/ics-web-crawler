@@ -10,20 +10,20 @@ def scraper(url, resp):
     if site.status_code != 200:  # request did not succeed
         return []
 
-    soup = BeautifulSoup(requests.get(url).content, "html.parser")
-    for a_tag in soup.findAll("a"):  # html link tags
-        href = a_tag.attrs.get("href")  # url
+    links = extract_next_links(url, resp)
 
-
-    # #links = extract_next_links(url, resp)
-    # return [link for link in page_links if is_valid(link)]
-    return None
+    #return [link for link in links if is_valid(link)]
 
 
 def extract_next_links(url, resp):
-    # Implementation required.
+    linked_pages = set()
 
-    return list()
+    soup = BeautifulSoup(requests.get(url).content, "html.parser")
+    for a_tag in soup.findAll("a"):  # html link tags
+        href = a_tag.attrs.get("href")  # url
+        linked_pages.add(href)
+
+    return linked_pages
 
 
 def is_valid(url):
