@@ -27,16 +27,37 @@ def extract_next_links(url, resp):
 
 
 def is_valid(url):
-    # need to change this to fit assignment guidelines
     try:
         parsed = urlparse(url)
-        if parsed.scheme not in {"http", "https"} \
-                or parsed.netloc not in {'www.ics.uci.edu', 'www.cs.uci.edu', 'www.informatics.uci.edu',
-                                          'www.stat.uci.edu',
-                                          'www.today.uci.edu'}:
+
+        if parsed.scheme not in {'http', 'https'}:
             return False
-        if parsed.netloc == 'www.today.uci.edu' and parsed.path != '/department/information_computer_sciences':
-            return False
+
+        # checking for subdomains
+        parsed_copy = urlparse(url)
+        subdomain_split = parsed_copy.netloc.split('.')
+
+        # has a subdomain
+        if len(subdomain_split) > 4:
+            if subdomain_split[-2] != 'uci' and subdomain_split[-1] != 'edu':
+                return False
+
+            if subdomain_split[-3] not in {'ics', 'cs', 'informatics', 'stat', 'today'}:
+                return False
+
+        # does not have a subdomain
+        else:
+            if parsed.scheme not in {"http", "https"} \
+                    or parsed.netloc not in {'www.ics.uci.edu', 'www.cs.uci.edu', 'www.informatics.uci.edu',
+                                             'www.stat.uci.edu',
+                                             'www.today.uci.edu'}:
+                return False
+
+            # special case: today.uci.edu
+            if parsed.netloc == 'www.today.uci.edu':
+                if '/department/information_computer_sciences' not in parsed.path:
+                    return False
+
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
@@ -48,6 +69,6 @@ def is_valid(url):
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
 
     except TypeError:
-        print ("TypeError for ", parsed)
+        print("TypeError for ", parsed)
         raise
 
