@@ -2,23 +2,42 @@ import re
 import requests
 from urllib.parse import urlparse, urljoin
 from bs4 import BeautifulSoup
+import tokenizer
+
+stopwords = ["a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as",
+             "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can't",
+             "cannot", "could", "couldn't", "did", "didn't", "do", "does", "doesn't", "doing", "don't", "down",
+             "during", "each", "few", "for", "from", "further", "had", "hadn't", "has", "hasn't", "have", "haven't",
+             "having", "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself", "him", "himself",
+             "his", "how", "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "isn't", "it", "it's",
+             "its", "itself", "let's", "me", "more", "most", "mustn't", "my", "myself", "no", "nor", "not", "of",
+             "off", "on", "once", "only", "or", "other", "ought", "our", "ours", "ourselves", "out", "over", "own",
+             "same", "shan't", "she", "she'd", "she'll", "she's", "should", "shouldn't", "so", "some", "such", "than",
+             "that", "that's", "the", "their", "theirs", "them", "themselves", "then", "there", "there's", "these",
+             "they", "they'd", "they'll", "they're", "they've", "this", "those", "through", "to", "too", "under",
+             "until", "up", "very", "was", "wasn't", "we", "we'd", "we'll", "we're", "we've", "were", "weren't", "what",
+             "what's", "when", "when's", "where", "where's", "which", "while", "who", "who's", "whom", "why", "why's",
+             "with", "won't", "would", "wouldn't", "you", "you'd", "you'll", "you're", "you've", "your", "yours",
+             "yourself", "yourselves"]
 
 
 def scraper(url, resp):
     site = requests.get(url)
-
     if site.status_code != 200:  # request did not succeed
         return []
     links = extract_next_links(url, resp)
 
     # need to move on to more URLs
-    return [link for link in links if is_valid(link)]
+    found = [link for link in links if is_valid(link)]
+    final = check_similar(found)  # Check for similarities within list of new found links
+    return final
 
 
 def extract_next_links(url, resp):
     linked_pages = set()
 
     soup = BeautifulSoup(requests.get(url).content, "html.parser")
+
     for a_tag in soup.findAll("a"):  # html link tags
         href = a_tag.attrs.get("href")  # url
         linked_pages.add(href)
@@ -29,7 +48,6 @@ def extract_next_links(url, resp):
 def is_valid(url):
     try:
         parsed = urlparse(url)
-
         if parsed.scheme not in {'http', 'https'}:
             return False
 
@@ -37,8 +55,9 @@ def is_valid(url):
         parsed_copy = urlparse(url)
         subdomain_split = parsed_copy.netloc.split('.')
 
-        # has a subdomain
-        if len(subdomain_split) > 4:
+        # has a subdomain (possibly edited to include len 4)
+        if len(subdomain_split) >= 4:
+
             if subdomain_split[-2] != 'uci' and subdomain_split[-1] != 'edu':
                 return False
 
@@ -72,3 +91,39 @@ def is_valid(url):
         print("TypeError for ", parsed)
         raise
 
+
+'''
+This is intended to further filter the results that stem from is_valid(url) 
+Created to check if there are pairs of similar pages through checking of token overlap and checks if unique by checking
+number of unique tokens
+
+Current Issues: Inefficient, removal of both links if duplicate is found
+Print statements are commented out for debugging purposes.
+'''
+
+
+def check_similar(link_list):
+
+    #print(f'Checking {len(link_list)} new links')
+    link_list = [link for link in link_list if not find_same(link, link_list.copy())]
+    #print(f'{len(link_list)} new links have been verified')
+    return link_list
+
+
+def find_same(check, llist): # Determines if check url is similar with another in the new link list
+    linksoup = BeautifulSoup(requests.get(check).content, "html.parser")
+    linktext = [text for text in linksoup.stripped_strings]  # Holds body of text found in current
+    llist.remove(check)
+    for others in llist:
+        testsoup = BeautifulSoup(requests.get(others).content, "html.parser")
+        alttext = [text for text in testsoup.stripped_strings]
+        similarity, percent, unique = tokenizer.compare(linktext, alttext)
+
+        if percent > 90.0:
+            #print(f'The number of similar words between the two pages are {similarity} words and {percent} '
+            #      f'{check} and {others} % so {check} is deleted')
+            return True
+        if unique < 100:
+            #print(f'The url {check} has a unique word count of {unique} and has been deemed low value and removed')
+            return True
+    return False
