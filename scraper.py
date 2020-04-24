@@ -51,10 +51,14 @@ def is_valid(url):
         parsed = urlparse(url)
         if parsed.scheme not in {'http', 'https'}:
             return False
+        print(url)
 
         # # checking for large files
         # if is_large(url):
         #     return False
+
+        if url.find('ics.uci.edu') == -1 and url.find('cs.uci.edu') == -1 and url.find('informatics.uci.edu') == -1 and url.find('stat.uci.edu') == -1 and url.find('www.today.uci.edu'):
+            return False
 
         # checking if can crawl
         if not can_crawl(url, parsed):
@@ -62,9 +66,6 @@ def is_valid(url):
 
         # checking if trap
         if is_trap(parsed):
-            return False
-
-        if url.find('ics.uci.edu') == -1 and url.find('cs.uci.edu') == -1 and url.find('informatics.uci.edu') == -1 and url.find('stat.uci.edu') == -1 and url.find('www.today.uci.edu'):
             return False
 
         return not re.match(
@@ -97,7 +98,7 @@ def is_trap(parsed) -> bool:
     # https://support.archive-it.org/hc/en-us/articles/208332943-Identify-and-avoid-crawler-traps-
 
     # long url traps
-    if len(str(parsed.geturl())) > 200:
+    if len(str(parsed.geturl())) > 150:
         return True
 
     # anchor traps
