@@ -51,6 +51,18 @@ def is_valid(url):
         if parsed.scheme not in {'http', 'https'}:
             return False
 
+        # checking for large files
+        if is_large_file(url):
+            return False
+
+        # checking if can crawl
+        if not can_crawl(url):
+            return False
+
+        # checking if trap
+        if is_trap(parsed):
+            return False
+
         # checking for subdomains
         parsed_copy = urlparse(url)
         subdomain_split = parsed_copy.netloc.split('.')
@@ -85,11 +97,66 @@ def is_valid(url):
             + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
             + r"|epub|dll|cnf|tgz|sha1"
             + r"|thmx|mso|arff|rtf|jar|csv"
-            + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
+            + r"|thmx|mso|arff|rtf|jar|csv|thesis"
+            + r"|z|aspx|mpg|mat|pps|bam|ppsx"
+            + r"|rm|smil|wmv|swf|wma|zip|rar|gz|war|apk)$", parsed.path.lower())
 
     except TypeError:
         print("TypeError for ", parsed)
         raise
+
+
+def can_crawl(orig_url, attempted_url) -> bool:
+    if orig_url[-1] != "/":
+        orig_url += "/robots.txt"
+    rp = robotparser.RobotFileParser()
+    rp.set_url(orig_url)
+    rp.read()
+    return rp.can_fetch("*", attempted_url)
+
+
+def is_trap(parsed) -> bool:
+    # was able to identify what causes traps and get regular expressions from:
+    # https://support.archive-it.org/hc/en-us/articles/208332943-Identify-and-avoid-crawler-traps-
+
+    # long url traps
+    if len(str(parsed.geturl())) > 200:
+        return True
+
+    # anchor traps
+    if "#" in parsed.geturl():
+        return True
+
+    # repeating directories
+    if re.match("^.*?(/.+?/).*?\1.*$|^.*?/(.+?/)\2.*$", parsed.path):
+        return True
+
+    # extra directories
+    if re.match("^.*(/misc|/sites|/all|/themes|/modules|/profiles|/css|/field|/node|/theme){3}.*$", parsed.path):
+        return True
+
+    # empty
+    if parsed is None:
+        return False
+
+    # calendars
+    if "calendar" in parsed.path:
+        return False
+
+
+def is_large_file(url) -> bool:
+    response = requests.head(url)
+    content_length = response.headers['Content-length']
+    if int(content_length) > 4096:
+        return True
+    if tokenizer.tokenize(get_text(url)) < 100:
+        return True
+
+
+def get_text(url) -> list:
+    soup = BeautifulSoup(requests.get(url).content, "html.parser")
+    text = [text for text in soup.stripped_strings]
+    return text
 
 
 '''

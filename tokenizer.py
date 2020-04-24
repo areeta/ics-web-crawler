@@ -1,4 +1,3 @@
-# Part B: Intersection of Two Files
 """
 Summary of my tokenizer:
     * A sequence is composed of 2 or more alphanumeric characters.
@@ -9,7 +8,6 @@ Summary of my tokenizer:
         exclamations, question marks, colons, and semicolons)
 """
 import re
-
 
 
 def tokenize(wordlist) -> list:
@@ -54,9 +52,3 @@ def compare(text1, text2):
     similarity, percent, unique = intersection(list1, list2)
 
     return similarity, percent, unique
-
-
-if __name__ == "__main__":
-    trial = []
-    test = tokenize(trial)
-    print(test)
