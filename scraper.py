@@ -107,11 +107,15 @@ def is_valid(url):
 
 
 def can_crawl(orig_url, attempted_url) -> bool:
+    # robots
     if orig_url[-1] != "/":
         orig_url += "/robots.txt"
     rp = robotparser.RobotFileParser()
     rp.set_url(orig_url)
     rp.read()
+
+    # sitemaps
+    
     return rp.can_fetch("*", attempted_url)
 
 
