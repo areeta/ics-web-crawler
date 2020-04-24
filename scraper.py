@@ -60,10 +60,11 @@ def is_valid(url):
             return False
 
 
-        # # checking for large files
-        # if is_large(url):
-        #     return False
+        # checking for quality
+        if not is_high_quality(url):
+            return False
 
+        # checking if right domain/subdomain
         if url.find('ics.uci.edu') == -1 and url.find('cs.uci.edu') == -1 and url.find('informatics.uci.edu') == -1 and url.find('stat.uci.edu') == -1 and url.find('www.today.uci.edu'):
             return False
 
@@ -107,7 +108,7 @@ def is_trap(parsed) -> bool:
     # https://support.archive-it.org/hc/en-us/articles/208332943-Identify-and-avoid-crawler-traps-
 
     # long url traps
-    if len(str(parsed.geturl())) > 150:
+    if len(str(parsed.geturl())) > 200:
         return True
 
     # anchor traps
@@ -126,8 +127,7 @@ def is_trap(parsed) -> bool:
     if parsed is None:
         return False
 
-    # no calendars
-    if "calendar" in parsed.path:
+    if re.match(r".*(calendar|date|gallery|image|wp-content|pdf|img_).*?$", parsed.path.lower()):
         return False
 
     # no event calendars
@@ -135,11 +135,12 @@ def is_trap(parsed) -> bool:
         return False
 
 
-def is_large(url) -> bool:
-    d = urllib.request.urlopen(url)
-    file_size = int(d.getheader('Content-Length'))
-    if file_size > 4096:
+def is_high_quality(url) -> bool:
+    soup = BeautifulSoup(requests.get(url).content, 'html.parser')
+    amount_of_text = len([text for text in soup.stripped_strings])
+    if amount_of_text > 50:
         return True
+    return False
 
 
 '''
