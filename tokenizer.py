@@ -10,16 +10,21 @@ Summary of my tokenizer:
 import re
 
 
-def tokenize(wordlist) -> list:
-    tokens = []  # Return this for final tokens found in file
+def tokenize(wordlist):
+    #tokens = []  # Return this for final tokens found in file
 
+    '''
     for text in wordlist:
         found = re.findall(r"[a-z0-9A-Z]{2,}", text)
-        tokens = tokens + found
+        tokens += found
+    This version of tokenizer is using get_text() to get all text in one string from webpage
+    '''
+    tokens = re.findall(r"[a-z0-9A-Z]{2,}", wordlist)
 
     for i in range(len(tokens)):
         tokens[i] = tokens[i].lower()
-
+    tokens = set(tokens)
+    # print(tokens, len(tokens))
     return tokens
 
 """
@@ -33,8 +38,8 @@ double loop that would iterate through both word lists.
 
 def intersection(file1_words, file2_words):
     """ Word lists are casted to sets in order to remove duplicates. """
-    file1_words = set(file1_words)
-    file2_words = set(file2_words)
+    #file1_words = set(file1_words)
+    #file2_words = set(file2_words)
 
     similar_words = []
     for word in file1_words:

@@ -5,7 +5,7 @@ from urllib.parse import urlparse, urljoin
 from bs4 import BeautifulSoup
 import urllib.robotparser
 import tokenizer
-
+from collections import defaultdict
 
 stopwords = ["a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as",
              "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can't",
@@ -23,8 +23,13 @@ stopwords = ["a", "about", "above", "after", "again", "against", "all", "am", "a
              "with", "won't", "would", "wouldn't", "you", "you'd", "you'll", "you're", "you've", "your", "yours",
              "yourself", "yourselves"]
 
+unique_url = set()  # Question 1: How many unique pages (based on url) ?
+longest_page = {'url': 'initial', 'len': 0}  # Question 2: What is the longest page in terms of number of words?
+most_common = defaultdict(int)  # Question 3: What are the 50 most common words in the entire set of pages (exclude stop words) ?
+sub_domains = defaultdict(int) # Questions 4: How many sub domains did you find in the ics.uci.edu domain?
 
 def scraper(url, resp):
+
     site = requests.get(url)
     if site.status_code != 200:  # request did not succeed
         return []
@@ -32,7 +37,9 @@ def scraper(url, resp):
 
     # need to move on to more URLs
     found = [link for link in links if is_valid(link)]
-    # final = check_similar(found)  # Check for similarities within list of new found links
+    #print('final')
+    #final = check_similar(found)  # Check for similarities within list of new found links
+    #print('done')
     return found
 
 
@@ -51,7 +58,7 @@ def is_valid(url):
         parsed = urlparse(url)
         if parsed.scheme not in {'http', 'https'}:
             return False
-        print(url)
+
 
         # # checking for large files
         # if is_large(url):
@@ -67,6 +74,8 @@ def is_valid(url):
         # checking if trap
         if is_trap(parsed):
             return False
+
+        analyze(url)
 
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
@@ -138,33 +147,53 @@ This is intended to further filter the results that stem from is_valid(url)
 Created to check if there are pairs of similar pages through checking of token overlap and checks if unique by checking
 number of unique tokens
 
-Current Issues: Inefficient, removal of both links if duplicate is found
+Added analysis tools to use when building report
+
+Current Issues: Inefficient
 Print statements are commented out for debugging purposes.
 '''
+
+
+def analyze(url): # Checks url for data being asked
+    text = get_text(url) # Gathers text found from web page
+    parsed = urlparse(url) # Gathers url to be edited
+    page = parsed.scheme + "://" + parsed.netloc + parsed.path
+    unique_url.add(page)  # Question 1
+    if len(text) > longest_page['len']:  # Question 2
+        longest_page['len'] = len(text)
+        longest_page['url'] = page
+    for word in text:      # Question 3
+        most_common[word] += 1
+    if url.find('ics.uci.edu') > 0:
+        sub_domains[page] += 1
+
+def get_text(url):
+    soup = BeautifulSoup(requests.get(url).content, "html.parser")
+    words = soup.get_text(" ", strip=True)
+    wordset = tokenizer.tokenize(words)
+    return wordset
 
 
 def check_similar(link_list):
 
     #print(f'Checking {len(link_list)} new links')
-    link_list = [link for link in link_list if not find_same(link, link_list.copy())]
+
+    matched = []
+    for link in link_list:
+        find_same(link, link_list, matched)
+
+    #print(matched, ' removed ', len(matched))
+    link_list = [link for link in link_list if link not in matched]
     #print(f'{len(link_list)} new links have been verified')
     return link_list
 
 
-def find_same(check, llist): # Determines if check url is similar with another in the new link list
-    linksoup = BeautifulSoup(requests.get(check).content, "html.parser")
-    linktext = [text for text in linksoup.stripped_strings]  # Holds body of text found in current
-    llist.remove(check)
-    for others in llist:
-        testsoup = BeautifulSoup(requests.get(others).content, "html.parser")
-        alttext = [text for text in testsoup.stripped_strings]
-        similarity, percent, unique = tokenizer.compare(linktext, alttext)
-
-        if percent > 90.0:
-            #print(f'The number of similar words between the two pages are {similarity} words and {percent} '
-            #      f'{check} and {others} % so {check} is deleted')
-            return True
-        if unique < 100:
-            #print(f'The url {check} has a unique word count of {unique} and has been deemed low value and removed')
-            return True
-    return False
+def find_same(check, llist, matched): # Determines if check url is similar with another in the new link list
+   #print('done', len(matched))
+    for others in llist.copy():
+        if check != others and others not in matched:
+            similarity, percent, unique = tokenizer.intersection(get_text(check), get_text(others))
+            if (unique < 150 or percent > 90.0) and others not in matched:
+                matched.append(check)
+                #print('matched', check, ' with ', others)
+                break
