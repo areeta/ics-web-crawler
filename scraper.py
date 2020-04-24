@@ -1,8 +1,11 @@
 import re
 import requests
+import urllib
 from urllib.parse import urlparse, urljoin
 from bs4 import BeautifulSoup
+import urllib.robotparser
 import tokenizer
+
 
 stopwords = ["a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as",
              "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can't",
@@ -29,15 +32,13 @@ def scraper(url, resp):
 
     # need to move on to more URLs
     found = [link for link in links if is_valid(link)]
-    final = check_similar(found)  # Check for similarities within list of new found links
-    return final
+    # final = check_similar(found)  # Check for similarities within list of new found links
+    return found
 
 
 def extract_next_links(url, resp):
     linked_pages = set()
-
     soup = BeautifulSoup(requests.get(url).content, "html.parser")
-
     for a_tag in soup.findAll("a"):  # html link tags
         href = a_tag.attrs.get("href")  # url
         linked_pages.add(href)
@@ -51,43 +52,20 @@ def is_valid(url):
         if parsed.scheme not in {'http', 'https'}:
             return False
 
-        # checking for large files
-        if is_large_file(url):
-            return False
+        # # checking for large files
+        # if is_large(url):
+        #     return False
 
         # checking if can crawl
-        if not can_crawl(url):
+        if not can_crawl(url, parsed):
             return False
 
         # checking if trap
         if is_trap(parsed):
             return False
 
-        # checking for subdomains
-        parsed_copy = urlparse(url)
-        subdomain_split = parsed_copy.netloc.split('.')
-
-        # has a subdomain (possibly edited to include len 4)
-        if len(subdomain_split) >= 4:
-
-            if subdomain_split[-2] != 'uci' and subdomain_split[-1] != 'edu':
-                return False
-
-            if subdomain_split[-3] not in {'ics', 'cs', 'informatics', 'stat', 'today'}:
-                return False
-
-        # does not have a subdomain
-        else:
-            if parsed.scheme not in {"http", "https"} \
-                    or parsed.netloc not in {'www.ics.uci.edu', 'www.cs.uci.edu', 'www.informatics.uci.edu',
-                                             'www.stat.uci.edu',
-                                             'www.today.uci.edu'}:
-                return False
-
-            # special case: today.uci.edu
-            if parsed.netloc == 'www.today.uci.edu':
-                if '/department/information_computer_sciences' not in parsed.path:
-                    return False
+        if url.find('ics.uci.edu') == -1 and url.find('cs.uci.edu') == -1 and url.find('informatics.uci.edu') == -1 and url.find('stat.uci.edu') == -1 and url.find('www.today.uci.edu'):
+            return False
 
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
@@ -106,17 +84,12 @@ def is_valid(url):
         raise
 
 
-def can_crawl(orig_url, attempted_url) -> bool:
+def can_crawl(url, parsed) -> bool:
     # robots
-    if orig_url[-1] != "/":
-        orig_url += "/robots.txt"
-    rp = robotparser.RobotFileParser()
-    rp.set_url(orig_url)
+    rp = urllib.robotparser.RobotFileParser()
+    rp.set_url("http://" + parsed.netloc + "/robots.txt")
     rp.read()
-
-    # sitemaps
-    
-    return rp.can_fetch("*", attempted_url)
+    return rp.can_fetch("*", url)
 
 
 def is_trap(parsed) -> bool:
@@ -143,28 +116,24 @@ def is_trap(parsed) -> bool:
     if parsed is None:
         return False
 
-    # calendars
+    # no calendars
     if "calendar" in parsed.path:
         return False
 
+    # no event calendars
+    if "/event/" in parsed.path or "/events/" in parsed.path:
+        return False
 
-def is_large_file(url) -> bool:
-    response = requests.head(url)
-    content_length = response.headers['Content-length']
-    if int(content_length) > 4096:
+
+def is_large(url) -> bool:
+    d = urllib.request.urlopen(url)
+    file_size = int(d.getheader('Content-Length'))
+    if file_size > 4096:
         return True
-    if tokenizer.tokenize(get_text(url)) < 100:
-        return True
-
-
-def get_text(url) -> list:
-    soup = BeautifulSoup(requests.get(url).content, "html.parser")
-    text = [text for text in soup.stripped_strings]
-    return text
 
 
 '''
-This is intended to further filter the results that stem from is_valid(url) 
+This is intended to further filter the results that stem from is_valid(url)
 Created to check if there are pairs of similar pages through checking of token overlap and checks if unique by checking
 number of unique tokens
 
