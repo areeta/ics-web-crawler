@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 import urllib.robotparser
 from collections import defaultdict
+import logging
 
 
 stopwords = ["a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as",
@@ -66,10 +67,6 @@ def is_valid(url):
         if parsed.scheme not in {'http', 'https'}:
             return False
 
-        # checking for quality
-        if not is_high_quality(url):
-            return False
-
         # checking if right domain/subdomain
         if url.find('ics.uci.edu') == -1 and url.find('cs.uci.edu') == -1 \
                 and url.find('informatics.uci.edu') == -1 and url.find('stat.uci.edu') == -1 \
@@ -82,6 +79,10 @@ def is_valid(url):
 
         # checking if trap
         if is_trap(parsed):
+            return False
+
+        # checking for quality
+        if not is_high_quality(url):
             return False
 
         # answering deliverables
@@ -173,7 +174,7 @@ def analyze(url):
         most_common[word] += 1
     if url.find('ics.uci.edu') > 0:
         sub_domains[page] += 1
-
+        
 
 def get_text(url):
     # scraps entire webpage's text and tokenizes
@@ -187,7 +188,7 @@ def get_text(url):
     word_set = set(word_list)
     copy_set = word_set
 
-    # removes words that aren't
+    # removes words that shouldn't be considered
     for word in copy_set:
         if len(word) < 3:
             word_set.remove(word)
