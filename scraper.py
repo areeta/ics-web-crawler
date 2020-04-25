@@ -1,11 +1,11 @@
 import re
 import requests
 import urllib
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 import urllib.robotparser
-import tokenizer
 from collections import defaultdict
+
 
 stopwords = ["a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as",
              "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can't",
@@ -23,33 +23,40 @@ stopwords = ["a", "about", "above", "after", "again", "against", "all", "am", "a
              "with", "won't", "would", "wouldn't", "you", "you'd", "you'll", "you're", "you've", "your", "yours",
              "yourself", "yourselves"]
 
-unique_url = set()  # Question 1: How many unique pages (based on url) ?
-longest_page = {'url': 'initial', 'len': 0}  # Question 2: What is the longest page in terms of number of words?
-most_common = defaultdict(int)  # Question 3: What are the 50 most common words in the entire set of pages (exclude stop words) ?
-sub_domains = defaultdict(int) # Questions 4: How many sub domains did you find in the ics.uci.edu domain?
+# Question 1: How many unique pages (based on url) ?
+unique_url = set()
+
+# Question 2: What is the longest page in terms of number of words?
+longest_page = {'url': 'initial', 'len': 0}
+
+# Question 3: What are the 50 most common words in the entire set of pages (exclude stop words) ?
+most_common = defaultdict(int)
+
+# Questions 4: How many sub domains did you find in the ics.uci.edu domain?
+sub_domains = defaultdict(int)
+
 
 def scraper(url, resp):
-
     site = requests.get(url)
-    if site.status_code != 200:  # request did not succeed
-        return []
-    links = extract_next_links(url, resp)
 
-    # need to move on to more URLs
+    # request did not succeed
+    if site.status_code != 200:
+        return []
+
+    # find links of current url
+    links = extract_next_links(url, resp)
     found = [link for link in links if is_valid(link)]
-    #print('final')
-    #final = check_similar(found)  # Check for similarities within list of new found links
-    #print('done')
     return found
 
 
 def extract_next_links(url, resp):
     linked_pages = set()
     soup = BeautifulSoup(requests.get(url).content, "html.parser")
-    for a_tag in soup.findAll("a"):  # html link tags
-        href = a_tag.attrs.get("href")  # url
-        linked_pages.add(href)
 
+    # finds all html link tags
+    for a_tag in soup.findAll("a"):
+        href = a_tag.attrs.get("href")
+        linked_pages.add(href)
     return linked_pages
 
 
@@ -59,13 +66,14 @@ def is_valid(url):
         if parsed.scheme not in {'http', 'https'}:
             return False
 
-
         # checking for quality
         if not is_high_quality(url):
             return False
 
         # checking if right domain/subdomain
-        if url.find('ics.uci.edu') == -1 and url.find('cs.uci.edu') == -1 and url.find('informatics.uci.edu') == -1 and url.find('stat.uci.edu') == -1 and url.find('www.today.uci.edu'):
+        if url.find('ics.uci.edu') == -1 and url.find('cs.uci.edu') == -1 \
+                and url.find('informatics.uci.edu') == -1 and url.find('stat.uci.edu') == -1 \
+                and url.find('www.today.uci.edu'):
             return False
 
         # checking if can crawl
@@ -76,6 +84,7 @@ def is_valid(url):
         if is_trap(parsed):
             return False
 
+        # answering deliverables
         analyze(url)
 
         return not re.match(
@@ -96,7 +105,10 @@ def is_valid(url):
 
 
 def can_crawl(url, parsed) -> bool:
-    # robots
+    # checking robots.txt
+    site = requests.get("http://" + parsed.netloc + "/robots.txt")
+    if site.status_code != 200:
+        return False
     rp = urllib.robotparser.RobotFileParser()
     rp.set_url("http://" + parsed.netloc + "/robots.txt")
     rp.read()
@@ -136,65 +148,47 @@ def is_trap(parsed) -> bool:
 
 
 def is_high_quality(url) -> bool:
+    # checks if high quality by amount of text
     soup = BeautifulSoup(requests.get(url).content, 'html.parser')
-    amount_of_text = len([text for text in soup.stripped_strings])
-    if amount_of_text > 50:
+    amount_of_text = len(get_text(url))
+    if amount_of_text > 100:
         return True
     return False
 
 
-'''
-This is intended to further filter the results that stem from is_valid(url)
-Created to check if there are pairs of similar pages through checking of token overlap and checks if unique by checking
-number of unique tokens
-
-Added analysis tools to use when building report
-
-Current Issues: Inefficient
-Print statements are commented out for debugging purposes.
-'''
-
-
-def analyze(url): # Checks url for data being asked
-    text = get_text(url) # Gathers text found from web page
-    parsed = urlparse(url) # Gathers url to be edited
+def analyze(url):
+    text = get_text(url)
+    parsed = urlparse(url)
     page = parsed.scheme + "://" + parsed.netloc + parsed.path
-    unique_url.add(page)  # Question 1
-    if len(text) > longest_page['len']:  # Question 2
+    # increments unique urls to find total
+    unique_url.add(page)
+
+    # compares for longest page
+    if len(text) > longest_page['len']:
         longest_page['len'] = len(text)
         longest_page['url'] = page
-    for word in text:      # Question 3
+
+    # finds most common word
+    for word in text:
         most_common[word] += 1
     if url.find('ics.uci.edu') > 0:
         sub_domains[page] += 1
 
+
 def get_text(url):
+    # scraps entire webpage's text and tokenizes
     soup = BeautifulSoup(requests.get(url).content, "html.parser")
     words = soup.get_text(" ", strip=True)
-    wordset = tokenizer.tokenize(words)
-    return wordset
+    words = words.lower()
+    words = re.sub('[^A-Za-z0-9]+', ' ', words)
 
+    # takes all duplicates out
+    word_list = words.split()
+    word_set = set(word_list)
+    copy_set = word_set
 
-def check_similar(link_list):
-
-    #print(f'Checking {len(link_list)} new links')
-
-    matched = []
-    for link in link_list:
-        find_same(link, link_list, matched)
-
-    #print(matched, ' removed ', len(matched))
-    link_list = [link for link in link_list if link not in matched]
-    #print(f'{len(link_list)} new links have been verified')
-    return link_list
-
-
-def find_same(check, llist, matched): # Determines if check url is similar with another in the new link list
-   #print('done', len(matched))
-    for others in llist.copy():
-        if check != others and others not in matched:
-            similarity, percent, unique = tokenizer.intersection(get_text(check), get_text(others))
-            if (unique < 150 or percent > 90.0) and others not in matched:
-                matched.append(check)
-                #print('matched', check, ' with ', others)
-                break
+    # removes words that aren't
+    for word in copy_set:
+        if len(word) < 3:
+            word_set.remove(word)
+    return word_set
