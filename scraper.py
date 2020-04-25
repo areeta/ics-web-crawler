@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import urllib.robotparser
 import tokenizer
 from collections import defaultdict
+import logging
 
 stopwords = ["a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as",
              "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can't",
@@ -25,8 +26,9 @@ stopwords = ["a", "about", "above", "after", "again", "against", "all", "am", "a
 
 unique_url = set()  # Question 1: How many unique pages (based on url) ?
 longest_page = {'url': 'initial', 'len': 0}  # Question 2: What is the longest page in terms of number of words?
-most_common = defaultdict(int)  # Question 3: What are the 50 most common words in the entire set of pages (exclude stop words) ?
-sub_domains = defaultdict(int) # Questions 4: How many sub domains did you find in the ics.uci.edu domain?
+most_common = defaultdict(int)  # Question 3: What are the 50 most common words in the entire set of pages?
+sub_domains = defaultdict(int)  # Questions 4: How many sub domains did you find in the ics.uci.edu domain?
+
 
 def scraper(url, resp):
 
@@ -34,12 +36,16 @@ def scraper(url, resp):
     if site.status_code != 200:  # request did not succeed
         return []
     links = extract_next_links(url, resp)
-
     # need to move on to more URLs
     found = [link for link in links if is_valid(link)]
-    #print('final')
-    #final = check_similar(found)  # Check for similarities within list of new found links
-    #print('done')
+
+    for link in found:
+        analyze(link)
+
+    # print('final')
+    # final = check_similar(found)  # Check for similarities within list of new found links
+    # print('done')
+
     return found
 
 
@@ -59,11 +65,6 @@ def is_valid(url):
         if parsed.scheme not in {'http', 'https'}:
             return False
 
-
-        # checking for quality
-        if not is_high_quality(url):
-            return False
-
         # checking if right domain/subdomain
         if url.find('ics.uci.edu') == -1 and url.find('cs.uci.edu') == -1 and url.find('informatics.uci.edu') == -1 and url.find('stat.uci.edu') == -1 and url.find('www.today.uci.edu'):
             return False
@@ -76,7 +77,13 @@ def is_valid(url):
         if is_trap(parsed):
             return False
 
-        analyze(url)
+        # checking for quality
+        if not is_high_quality(url):
+            return False
+
+        # checking if url has been previously been added to to frontier/unique_urls
+        if url in unique_url:
+            return False
 
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
@@ -149,24 +156,43 @@ Created to check if there are pairs of similar pages through checking of token o
 number of unique tokens
 
 Added analysis tools to use when building report
-
-Current Issues: Inefficient
 Print statements are commented out for debugging purposes.
 '''
 
 
 def analyze(url): # Checks url for data being asked
     text = get_text(url) # Gathers text found from web page
-    parsed = urlparse(url) # Gathers url to be edited
-    page = parsed.scheme + "://" + parsed.netloc + parsed.path
-    unique_url.add(page)  # Question 1
+    # parsed = urlparse(url) # Gathers url to be edited
+    # page = parsed.scheme + "://" + parsed.netloc + parsed.path
+    unique_url.add(url)  # Question 1
+
     if len(text) > longest_page['len']:  # Question 2
         longest_page['len'] = len(text)
-        longest_page['url'] = page
+        longest_page['url'] = url
+
     for word in text:      # Question 3
-        most_common[word] += 1
-    if url.find('ics.uci.edu') > 0:
-        sub_domains[page] += 1
+        if word not in stopwords:
+            most_common[word] += 1
+
+    if url.find('ics.uci.edu') > 0: # Question 4
+        sub_domains[url] += 1
+
+
+def questions():
+    # was able to identify how to create a custom log from
+    # https://www.machinelearningplus.com/python/python-logging-guide/
+
+    top50 = sorted(most_common.items(), key=lambda x: x[1], reverse=True)
+
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    file_handler = logging.FileHandler('questions.log')
+    formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(name)s : %(message)s')
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    logger.info(f"Unique Urls:{len(unique_url)}, Longest Page:{longest_page['url']} w/ len {longest_page['len']}\n"
+                f"Most Common:{top50[0:50]}\nSubDomains: {sub_domains}")
+
 
 def get_text(url):
     soup = BeautifulSoup(requests.get(url).content, "html.parser")
@@ -177,24 +203,24 @@ def get_text(url):
 
 def check_similar(link_list):
 
-    #print(f'Checking {len(link_list)} new links')
+    # print(f'Checking {len(link_list)} new links')
 
     matched = []
     for link in link_list:
         find_same(link, link_list, matched)
 
-    #print(matched, ' removed ', len(matched))
+    # print(matched, ' removed ', len(matched))
     link_list = [link for link in link_list if link not in matched]
-    #print(f'{len(link_list)} new links have been verified')
+    # print(f'{len(link_list)} new links have been verified')
     return link_list
 
 
 def find_same(check, llist, matched): # Determines if check url is similar with another in the new link list
-   #print('done', len(matched))
+    # print('done', len(matched))
     for others in llist.copy():
         if check != others and others not in matched:
             similarity, percent, unique = tokenizer.intersection(get_text(check), get_text(others))
             if (unique < 150 or percent > 90.0) and others not in matched:
                 matched.append(check)
-                #print('matched', check, ' with ', others)
+                # print('matched', check, ' with ', others)
                 break
