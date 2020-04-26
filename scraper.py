@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 import urllib.robotparser
 from collections import defaultdict
 import logging
-
+import copy
 
 stopwords = ["a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as",
              "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can't",
@@ -112,13 +112,16 @@ def is_valid(url):
 
 def can_crawl(url, parsed) -> bool:
     # checking robots.txt
-    site = requests.get("http://" + parsed.netloc + "/robots.txt")
-    if site.status_code != 200:
+    try:
+        site = requests.get("http://" + parsed.netloc + "/robots.txt")
+        if site.status_code != 200:
+            return False
+        rp = urllib.robotparser.RobotFileParser()
+        rp.set_url("http://" + parsed.netloc + "/robots.txt")
+        rp.read()
+        return rp.can_fetch("*", url)
+    except:
         return False
-    rp = urllib.robotparser.RobotFileParser()
-    rp.set_url("http://" + parsed.netloc + "/robots.txt")
-    rp.read()
-    return rp.can_fetch("*", url)
 
 
 def is_trap(parsed) -> bool:
@@ -155,9 +158,8 @@ def is_trap(parsed) -> bool:
 
 def is_high_quality(url) -> bool:
     # checks if high quality by amount of text
-    soup = BeautifulSoup(requests.get(url).content, 'html.parser')
     amount_of_text = len(get_text(url))
-    if amount_of_text > 100:
+    if amount_of_text > 300:
         return True
     return False
 
@@ -205,7 +207,7 @@ def get_text(url):
     # takes all duplicates out
     word_list = words.split()
     word_set = set(word_list)
-    copy_set = word_set
+    copy_set = copy.deepcopy(word_set)
 
     # removes words that shouldn't be considered
     for word in copy_set:
