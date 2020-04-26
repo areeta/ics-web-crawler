@@ -47,6 +47,7 @@ def scraper(url, resp):
     # find links of current url
     links = extract_next_links(url, resp)
     found = [link for link in links if is_valid(link)]
+    record_data() # Record Data
     return found
 
 
@@ -83,6 +84,10 @@ def is_valid(url):
 
         # checking for quality
         if not is_high_quality(url):
+            return False
+
+        # checking if url has been in unique_urls before
+        if url in unique_url:
             return False
 
         # answering deliverables
@@ -155,6 +160,20 @@ def is_high_quality(url) -> bool:
     if amount_of_text > 100:
         return True
     return False
+
+
+def record_data():
+    # was able to identify how to create a custom log from
+    # https://www.machinelearningplus.com/python/python-logging-guide/
+    top50 = sorted(most_common.items(), key=lambda x: x[1], reverse=True)
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    file_handler = logging.FileHandler('recorded_data.log')
+    formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(name)s : %(message)s')
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    logger.info(f"Unique Urls:{len(unique_url)}, Longest Page:{longest_page['url']} w/ len {longest_page['len']}\n"
+                f"Most Common:{top50[0:50]}\nSubDomains: {sub_domains}")
 
 
 def analyze(url):
