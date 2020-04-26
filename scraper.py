@@ -100,7 +100,6 @@ def is_valid(url):
             + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
             + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
             + r"|epub|dll|cnf|tgz|sha1"
-            + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|thmx|mso|arff|rtf|jar|csv|thesis"
             + r"|z|aspx|mpg|mat|pps|bam|ppsx"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz|war|apk)$", parsed.path.lower())
@@ -192,7 +191,8 @@ def analyze(url):
 
     # finds most common word
     for word in text:
-        most_common[word] += 1
+        if word not in stopwords:
+            most_common[word] += 1
     if url.find('ics.uci.edu') > 0:
         sub_domains[page] += 1
         
