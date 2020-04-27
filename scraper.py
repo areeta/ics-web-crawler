@@ -100,7 +100,6 @@ def is_valid(url):
             + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
             + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
             + r"|epub|dll|cnf|tgz|sha1"
-            + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|thmx|mso|arff|rtf|jar|csv|thesis"
             + r"|z|aspx|mpg|mat|pps|bam|ppsx"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz|war|apk)$", parsed.path.lower())
@@ -148,7 +147,12 @@ def is_trap(parsed) -> bool:
     if parsed is None:
         return False
 
+    # avoid club pages have events from too early
     if re.match(r".*(calendar|date|gallery|image|wp-content|pdf|img_).*?$", parsed.path.lower()):
+        return False
+
+    # avoid informatics' monthly archives
+    if re.match(r".*\/20\d\d-\d\d*", parsed.path.lower()):
         return False
 
     # no event calendars
@@ -157,11 +161,14 @@ def is_trap(parsed) -> bool:
 
 
 def is_high_quality(url) -> bool:
-    # checks if high quality by amount of text
-    amount_of_text = len(get_text(url))
-    if amount_of_text > 300:
-        return True
-    return False
+    try:
+        # checks if high quality by amount of text
+        amount_of_text = len(get_text(url))
+        if amount_of_text > 300:
+            return True
+        return False
+    except:
+        return False
 
 
 def record_data():
