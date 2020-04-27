@@ -199,7 +199,8 @@ def analyze(url):
 
     # finds most common word
     for word in text:
-        most_common[word] += 1
+        if word not in stopwords:
+            most_common[word] += 1
     if url.find('ics.uci.edu') > 0:
         sub_domains[page] += 1
         
