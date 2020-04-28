@@ -48,7 +48,7 @@ def scraper(url, resp):
     links = extract_next_links(url, resp)
     found = list(links)
 
-    # record Data
+    # record data
     record_data()
     return found
 
@@ -57,7 +57,7 @@ def extract_next_links(url, resp):
     linked_pages = set()
     soup = BeautifulSoup(requests.get(url).content, "html.parser")
 
-    # finds all html link tags
+    # finds all valid html link tags
     for a_tag in soup.findAll("a"):
         href = a_tag.attrs.get("href")
         if is_valid(href):
@@ -72,9 +72,9 @@ def is_valid(url):
             return False
 
         # checking if right domain/subdomain
-        if url.find('ics.uci.edu') == -1 and url.find('cs.uci.edu') == -1 \
-                and url.find('informatics.uci.edu') == -1 and url.find('stat.uci.edu') == -1 \
-                and url.find('www.today.uci.edu'):
+        if url.find('ics.uci.edu/') == -1 and url.find('cs.uci.edu/') == -1 \
+                and url.find('informatics.uci.edu/') == -1 and url.find('stat.uci.edu/') == -1 \
+                and url.find('today.uci.edu/department/information_computer_sciences/') == -1:
             return False
 
         # checking if can crawl
@@ -123,6 +123,7 @@ def can_crawl(url, parsed) -> bool:
         rp.read()
         return rp.can_fetch("*", url)
     except:
+        # means that there is no robots.txt for that website
         return False
 
 
@@ -189,9 +190,13 @@ def record_data():
 
 
 def analyze(url):
-    text = get_text(url)
+    try:
+        text = get_text(url)
+    except:
+        text = 0
     parsed = urlparse(url)
     page = parsed.scheme + "://" + parsed.netloc + parsed.path
+
     # increments unique urls to find total
     unique_url.add(page)
 
