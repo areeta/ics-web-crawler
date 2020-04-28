@@ -46,8 +46,10 @@ def scraper(url, resp):
 
     # find links of current url
     links = extract_next_links(url, resp)
-    found = [link for link in links if is_valid(link)]
-    record_data() # Record Data
+    found = list(links)
+
+    # record Data
+    record_data()
     return found
 
 
@@ -58,7 +60,8 @@ def extract_next_links(url, resp):
     # finds all html link tags
     for a_tag in soup.findAll("a"):
         href = a_tag.attrs.get("href")
-        linked_pages.add(href)
+        if is_valid(href):
+            linked_pages.add(href)
     return linked_pages
 
 
