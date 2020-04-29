@@ -71,6 +71,8 @@ def is_valid(url):
         if parsed.scheme not in {'http', 'https'}:
             return False
 
+        global unique_url
+
         # checking if right domain/subdomain
         if url.find('ics.uci.edu/') == -1 and url.find('cs.uci.edu/') == -1 \
                 and url.find('informatics.uci.edu/') == -1 and url.find('stat.uci.edu/') == -1 \
@@ -93,10 +95,7 @@ def is_valid(url):
         if url in unique_url:
             return False
 
-        # answering deliverables
-        analyze(url)
-
-        return not re.match(
+        if re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
             + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
@@ -105,7 +104,13 @@ def is_valid(url):
             + r"|epub|dll|cnf|tgz|sha1"
             + r"|thmx|mso|arff|rtf|jar|csv|thesis"
             + r"|z|aspx|mpg|mat|pps|bam|ppsx"
-            + r"|rm|smil|wmv|swf|wma|zip|rar|gz|war|apk)$", parsed.path.lower())
+            + r"|rm|smil|wmv|swf|wma|zip|rar|gz|war|apk)$", parsed.path.lower()):
+            return False
+
+        # answering deliverables
+        analyze(url)
+
+        return True
 
     except TypeError:
         print("TypeError for ", parsed)
@@ -190,6 +195,12 @@ def record_data():
 
 
 def analyze(url):
+    global unique_url
+    global most_common
+    global sub_domains
+    global longest_page
+    global stopwords
+
     try:
         text = get_text(url)
     except:
