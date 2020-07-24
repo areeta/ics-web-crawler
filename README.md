@@ -1,10 +1,6 @@
-ABOUT
--------------------------
-This is the base implementation of a full crawler that uses a spacetime
-cache server to receive requests.
+# ICS Web Crawler
 
-CONFIGURATION
--------------------------
+## Installation
 
 ### Step 1: Install dependencies
 
@@ -17,12 +13,8 @@ Linux: https://docs.python-guide.org/starting/install3/linux/
 MAC: https://docs.python-guide.org/starting/install3/osx/
 
 Check if pip is installed by opening up a terminal/command prompt and typing
-the commands `python3 -m pip`. This should show the help menu for all the 
-commands possible with pip. If it does not, then get pip by following the
-instructions at https://pip.pypa.io/en/stable/installing/
-
-To install the dependencies for this project run the following two commands
-after ensuring pip is installed for the version of python you are using.
+the commands `python3 -m pip`. To install the dependencies for this project run the 
+following two commands after ensuring pip is installed for the version of python you are using.
 Admin privileges might be required to execute the commands. Also make sure
 that the terminal is at the root folder of this project.
 ```
@@ -113,8 +105,7 @@ frontier.
 The first step of filtering the urls can be by using the **is_valid** function
 provided in the same scraper.py file. Additional rules should be added to the is_valid function to filter the urls.
 
-EXECUTION
--------------------------
+## Usage
 
 To execute the crawler run the launch.py command.
 ```python3 launch.py```
@@ -126,10 +117,9 @@ You can restart the crawler from the seed url
 You can specifiy a different config file to use by using the command with the option
 ```python3 launch.py --config_file path/to/config```
 
-ARCHITECTURE
--------------------------
+## Architecture
 
-### FLOW
+### Flow
 
 The crawler receives a cache host and port from the spacetime servers
 and instantiates the config.
@@ -145,7 +135,7 @@ the scraper is added to the list of undownloaded links in the frontier and
 the url that was downloaded is marked as complete. The cycle continues until
 there are no more urls to be downloaded in the frontier.
 
-### REDEFINING THE FRONTIER:
+### Redefining the frontier:
 
 You can make your own frontier to use with the crawler if they meet this
 interface definition:
@@ -174,7 +164,7 @@ class Frontier:
 A sample reference is given in utils/frontier.py L10. Note that this
 reference is not thread safe.
 
-### REDEFINING THE WORKER
+### Redefining the Worker
 
 You can make your own worker to use with the crawler if they meet this
 interface definition:
@@ -203,18 +193,14 @@ class Worker(Thread): # Worker must inherit from Thread or Process.
 ```
 A sample reference is given in utils/worker.py L9.
 
-THINGS TO KEEP IN MIND
--------------------------
+## Contributors
 
-1. It is important to filter out urls that do not point to a webpage. For
-   example, PDFs, PPTs, css, js, etc. The is_valid filters a large number of
-   such extensions, but there may be more.
-2. It is important to filter out urls that are not with ics.uci.edu domain.
-3. It is important to maintain the politeness to the cache server (on a per
-   domain basis).
-4. It is important to set the user agent in the config.ini correctly to get
-   credit for hitting the cache servers.
-5. Launching multiple instances of the crawler will download the same urls in
-   both. Mecahnisms can be used to avoid that, however the politeness limits
-   still apply and will be checked.
-6. Do not attempt to download the links directly from ics servers.
+[@areetaw](https://github.com/areetaw)
+
+[@kaeleylenard](https://github.com/kaeleylenard)
+
+[@ccervera1](https://github.com/ccervera1)
+
+## License
+[MIT](https://choosealicense.com/licenses/mit/)
+
